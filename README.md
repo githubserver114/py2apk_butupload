@@ -1,4 +1,6 @@
-# py2apk
+# py2apk_butupload
+
+This forked repository is based on py2apk and adds a WebView upload feature.
 
 [![GitHub issues](https://img.shields.io/github/issues/anbuhckr/py2apk)](https://github.com/anbuhckr/py2apk/issues)
 [![GitHub forks](https://img.shields.io/github/forks/anbuhckr/py2apk)](https://github.com/anbuhckr/py2apk/network)
