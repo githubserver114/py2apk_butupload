@@ -1,16 +1,20 @@
 package ${package_name};
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.KeyEvent;
+import android.view.View;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebChromeClient;
 import android.widget.FrameLayout;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
-import android.view.View;
 import androidx.annotation.NonNull;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.initialization.InitializationStatus;
@@ -34,6 +38,9 @@ public class MainActivity extends Activity {
     private FrameLayout fullscreenContainer;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private View mCustomView;
+
+    private ValueCallback<Uri[]> mFilePathCallback;
+    private static final int FILE_CHOOSER_REQUEST_CODE = 10001;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -119,8 +126,61 @@ public class MainActivity extends Activity {
                 fullscreenContainer.addView(view);
                 customViewCallback = callback;
             }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView,
+                                             ValueCallback<Uri[]> filePathCallback,
+                                             FileChooserParams fileChooserParams) {
+                if (mFilePathCallback != null) {
+                    mFilePathCallback.onReceiveValue(null);
+                    mFilePathCallback = null;
+                }
+                mFilePathCallback = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                } catch (Exception e) {
+                    mFilePathCallback = null;
+                    return false;
+                }
+            }
         });
         mWebView.loadUrl("${url_path}");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != FILE_CHOOSER_REQUEST_CODE) {
+            return;
+        }
+        if (mFilePathCallback == null) {
+            return;
+        }
+
+        ValueCallback<Uri[]> callback = mFilePathCallback;
+        mFilePathCallback = null;
+
+        Uri[] results = null;
+
+        if (resultCode == Activity.RESULT_OK && data != null) {
+            results = FileChooserParams.parseResult(resultCode, data);
+            if (results == null) {
+                Uri single = data.getData();
+                if (single != null) {
+                    results = new Uri[]{single};
+                } else if (data.getClipData() != null) {
+                    ClipData clipData = data.getClipData();
+                    results = new Uri[clipData.getItemCount()];
+                    for (int i = 0; i < clipData.getItemCount(); i++) {
+                        results[i] = clipData.getItemAt(i).getUri();
+                    }
+                }
+            }
+        }
+
+        callback.onReceiveValue(results);
     }
 
     public void createLoadInterstitial() {
